@@ -1,7 +1,7 @@
 #include <SPI.h>
 #include <math.h>
 #include <WiFi.h>
-#include <WebServer.h>
+#include <WebSocketsServer.h>
 
 #define CS_PIN 5
 #define SSR_PIN 13
@@ -14,7 +14,7 @@
 #define WIFI_SSID     "your_ssid_here"
 #define WIFI_PASSWORD "your_password_here"
 
-WebServer server(80);
+WebSocketsServer webSocket(81);
 
 SPIClass spi(VSPI);
 
@@ -44,55 +44,22 @@ struct SensorData {
   unsigned long uptimeMs;
 } latest = {0.0, 0.0, 0.0, false, 0};
 
-// --- HTTP handlers ---
+// --- WebSocket handler ---
 
-void handleData() {
-  char json[256];
-  snprintf(json, sizeof(json),
-    "{\"temperature\":%.2f,\"setpoint\":%.2f,\"duty_cycle\":%.4f,"
-    "\"tc_connected\":%s,\"uptime_ms\":%lu}",
-    latest.temperature, latest.setpoint, latest.dutyCycle,
-    latest.tcConnected ? "true" : "false",
-    latest.uptimeMs
-  );
-  server.send(200, "application/json", json);
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
+  switch (type) {
+    case WStype_CONNECTED:
+      Serial.printf("[WS] Client #%u connected from %s\n", num,
+                    webSocket.remoteIP(num).toString().c_str());
+      break;
+    case WStype_DISCONNECTED:
+      Serial.printf("[WS] Client #%u disconnected\n", num);
+      break;
+    default: break;
+  }
 }
 
-void handleRoot() {
-  server.send(200, "text/html",
-    "<!DOCTYPE html><html><head>"
-    "<meta charset='utf-8'><title>Tube Furnace</title>"
-    "<style>"
-    "body{font-family:monospace;background:#111;color:#eee;padding:2rem;}"
-    "h1{color:#f90;} .card{background:#222;border-radius:8px;padding:1rem;margin:.5rem 0;}"
-    ".label{color:#aaa;font-size:.85rem;} .val{font-size:2rem;font-weight:bold;}"
-    ".ok{color:#4f4;} .warn{color:#f44;}"
-    "</style></head><body>"
-    "<h1>Tube Furnace Monitor</h1>"
-    "<div class='card'><div class='label'>Temperature</div><div class='val' id='temp'>--</div></div>"
-    "<div class='card'><div class='label'>Setpoint</div><div class='val' id='sp'>--</div></div>"
-    "<div class='card'><div class='label'>Duty Cycle</div><div class='val' id='duty'>--</div></div>"
-    "<div class='card'><div class='label'>Thermocouple</div><div class='val' id='tc'>--</div></div>"
-    "<div class='card'><div class='label'>Uptime</div><div id='up'>--</div></div>"
-    "<script>"
-    "function fmt(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;"
-    "return `${h}h ${m}m ${sec}s`;}"
-    "async function refresh(){"
-    "try{const r=await fetch('/data');const d=await r.json();"
-    "document.getElementById('temp').textContent=d.temperature.toFixed(1)+' °C';"
-    "document.getElementById('sp').textContent=d.setpoint.toFixed(1)+' °C';"
-    "document.getElementById('duty').textContent=(d.duty_cycle*100).toFixed(1)+'%';"
-    "const tc=document.getElementById('tc');"
-    "tc.textContent=d.tc_connected?'Connected':'DISCONNECTED';"
-    "tc.className='val '+(d.tc_connected?'ok':'warn');"
-    "document.getElementById('up').textContent=fmt(Math.floor(d.uptime_ms/1000));"
-    "}catch(e){console.error(e);}}"
-    "refresh();setInterval(refresh,1000);"
-    "</script></body></html>"
-  );
-}
-
-// --- END HTTP handlers ---
+// --- END WebSocket handler ---
 
 float readMAX6675() {
   uint16_t data;
@@ -204,10 +171,9 @@ void setup() {
     Serial.println("\nWiFi failed — running without network.");
   }
 
-  // Start HTTP server
-  server.on("/", handleRoot);
-  server.on("/data", handleData);
-  server.begin();
+  // Start WebSocket server
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
 
   // Initialize ramp from first valid measurement
   float temp = readMAX6675();
@@ -224,7 +190,7 @@ void setup() {
 }
 
 void loop() {
-  server.handleClient();
+  webSocket.loop();
 
   unsigned long windowStart = millis();
 
@@ -249,6 +215,17 @@ void loop() {
   latest.dutyCycle   = dutyCycle;
   latest.tcConnected = true;
   latest.uptimeMs    = windowStart;
+
+  // Broadcast sensor JSON to all WebSocket clients
+  char json[256];
+  snprintf(json, sizeof(json),
+    "{\"temperature\":%.2f,\"setpoint\":%.2f,\"duty_cycle\":%.4f,"
+    "\"tc_connected\":%s,\"uptime_ms\":%lu}",
+    latest.temperature, latest.setpoint, latest.dutyCycle,
+    latest.tcConnected ? "true" : "false",
+    latest.uptimeMs
+  );
+  webSocket.broadcastTXT(json, strlen(json));
 
   unsigned long onTime  = (unsigned long)(windowMs * dutyCycle);
   unsigned long offTime = windowMs - onTime;
