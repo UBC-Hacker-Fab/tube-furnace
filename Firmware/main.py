@@ -41,15 +41,17 @@ line_temp, = ax1.plot([], [], label="Temperature")
 line_setpoint, = ax1.plot([], [], label="Setpoint")
 line_duty, = ax2.plot([], [], label="Duty Cycle", color="red")
 
-# Dummy legend entry for RMSE
+# Dummy legend entries for metrics
 rmse_entry = Line2D([], [], color='none', label="RMSE: ---")
+temp_slope_entry = Line2D([], [], color='none', label="Temp slope: --- °C/s")
+sp_slope_entry = Line2D([], [], color='none', label="Setpoint slope: --- °C/s")
 
 ax1.set_xlabel("Time (s)")
 ax1.set_ylabel("Temperature (°C)")
 ax2.set_ylabel("Duty Cycle", color="red")
 ax2.tick_params(axis='y', colors='red')
 
-ax1.set_title("Live Temperature, Setpoint, and Duty Cycle")
+ax1.set_title("Live Temperature, Setpoint, Duty Cycle")
 ax1.grid(True)
 
 def init():
@@ -59,7 +61,6 @@ def init():
     return line_temp, line_setpoint, line_duty
 
 def update(frame):
-
     while ser.in_waiting:
         try:
             raw = ser.readline().decode("utf-8", errors="ignore").strip()
@@ -109,13 +110,37 @@ def update(frame):
     # -------- RMSE calculation --------
     temp_arr = np.array(temp_data)
     sp_arr = np.array(setpoint_data)
-
     rmse = np.sqrt(np.mean((temp_arr - sp_arr) ** 2))
-
     rmse_entry.set_label(f"RMSE: {rmse:.2f} °C")
 
+    # -------- Mean slope over 3 samples --------
+    if len(t_data) >= 3:
+
+        dt = t_data[-1] - t_data[-3]
+
+        if dt > 0:
+            temp_slope = (temp_data[-1] - temp_data[-3]) / dt
+            sp_slope = (setpoint_data[-1] - setpoint_data[-3]) / dt
+        else:
+            temp_slope = 0.0
+            sp_slope = 0.0
+
+        temp_slope_entry.set_label(f"Temp slope (3): {temp_slope:.3f} °C/s")
+        sp_slope_entry.set_label(f"Setpoint slope (3): {sp_slope:.3f} °C/s")
+
+    else:
+        temp_slope_entry.set_label("Temp slope (3): --- °C/s")
+        sp_slope_entry.set_label("Setpoint slope (3): --- °C/s")
+
     # Update legend dynamically
-    lines = [line_temp, line_setpoint, line_duty, rmse_entry]
+    lines = [
+        line_temp,
+        line_setpoint,
+        line_duty,
+        rmse_entry,
+        temp_slope_entry,
+        sp_slope_entry
+    ]
     labels = [l.get_label() for l in lines]
     ax1.legend(lines, labels, loc="upper left")
 
