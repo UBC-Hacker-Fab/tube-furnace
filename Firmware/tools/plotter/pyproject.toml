@@ -1,0 +1,9 @@
+[project]
+name = "furnace-plotter"
+version = "0.1.0"
+description = "Live serial plotter for the tube furnace controller (temperature / setpoint / duty cycle)."
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "pyserial>=3.5",
+]

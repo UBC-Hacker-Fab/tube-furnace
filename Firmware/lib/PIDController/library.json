@@ -1,0 +1,8 @@
+{
+  "name": "PIDController",
+  "version": "1.0.0",
+  "description": "Dependency-free PID controller with configurable output limits and conditional-integration anti-windup. Reusable for any SISO control loop.",
+  "keywords": ["pid", "control", "anti-windup"],
+  "frameworks": "*",
+  "platforms": "*"
+}

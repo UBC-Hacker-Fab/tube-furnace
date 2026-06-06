@@ -1,0 +1,11 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Local credentials — copy secrets.example.h to secrets.h and fill in.
+include/secrets.h
+
+# Python tooling (tools/plotter)
+**/.venv/
+__pycache__/

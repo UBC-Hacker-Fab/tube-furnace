@@ -1,0 +1,11 @@
+{
+  "name": "MAX6675",
+  "version": "1.0.0",
+  "description": "Documented driver for the Maxim MAX6675 cold-junction-compensated K-type thermocouple-to-digital converter (read-only SPI).",
+  "keywords": ["max6675", "thermocouple", "spi", "temperature"],
+  "frameworks": "arduino",
+  "platforms": "*",
+  "dependencies": {
+    "SPI": "*"
+  }
+}

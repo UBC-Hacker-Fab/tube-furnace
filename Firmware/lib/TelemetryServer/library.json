@@ -1,0 +1,11 @@
+{
+  "name": "TelemetryServer",
+  "version": "1.0.0",
+  "description": "Payload-agnostic WebSocket broadcast server. Owns the socket lifecycle and exposes a one-line broadcast() for streaming telemetry to clients.",
+  "keywords": ["websocket", "telemetry", "broadcast", "esp32"],
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {
+    "links2004/WebSockets": "^2.4.1"
+  }
+}

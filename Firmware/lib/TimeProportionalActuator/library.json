@@ -1,0 +1,8 @@
+{
+  "name": "TimeProportionalActuator",
+  "version": "1.0.0",
+  "description": "Non-blocking time-proportional (slow-PWM) driver for on/off actuators like solid-state relays. Applies a 0..1 duty cycle without blocking the main loop.",
+  "keywords": ["ssr", "relay", "pwm", "time-proportional", "heater"],
+  "frameworks": "arduino",
+  "platforms": "*"
+}
